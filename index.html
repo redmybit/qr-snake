@@ -79,7 +79,9 @@
                     grid[segment[1]][segment[0]] = objectMapping.get("snake");
                 }
 
-                grid[apple[1]][apple[0]] = objectMapping.get("apple");
+                if (apple && apple.length === 2) {
+                    grid[apple[1]][apple[0]] = objectMapping.get("apple");
+                }
             }
             
             const newGame = function() {
@@ -184,4 +186,5 @@
             requestAnimationFrame(draw);
         </script>
     </body>
+
 </html>
