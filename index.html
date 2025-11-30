@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            #main-canvas {
+                background-color: black;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="main-canvas" width="500" height="500"></canvas>
+        <script>
+            const canvas = document.getElementById("main-canvas");
+            const ctx = canvas.getContext("2d");
+
+            const cellSize = 50;
+            const gridWidth = 10;
+            const gridHeight = 10;
+
+            const keyMapping = new Map();
+            keyMapping.set("w", [0, -1]);
+            keyMapping.set("a", [-1, 0]);
+            keyMapping.set("s", [0, 1]);
+            keyMapping.set("d", [1, 0]);
+
+            const objectMapping = new Map();
+            objectMapping.set("empty", "#0000ff");
+            objectMapping.set("snake", "#00ff00");
+            objectMapping.set("apple", "#ff0000");
+
+            var grid = [];
+            var snake = [];
+            var apple = [];
+            var snakeDirection = "w";
+
+            let last = 0;
+            const fps = 30;
+            const interval = 1000 / fps; // ~33.33 ms per frame
+
+            const conversion = 3;
+
+            const randomApplePos = function() {
+                let options = [];
+
+                for(let y = 0; y < gridHeight; y++) {
+                    for(let x = 0; x < gridWidth; x++) {
+                        if(grid[y][x] === objectMapping.get("empty")) {
+                            options.push([x, y]);
+                        }        
+                    }
+                }
+
+                if(options.length === 0) {
+                    return [0, 0];
+                }
+
+                let random = Math.floor(Math.random() * options.length);
+                return options[random]
+            }
+
+            const emptyGrid = function() {
+                let g = [];
+
+                for(let y = 0; y < gridHeight; y++) {
+                    let l = [];
+                    for(let x = 0; x < gridWidth; x++) {
+                        l.push(objectMapping.get("empty"));
+                    }
+                    g.push(l);
+                }
+
+                return g;
+            }
+
+            const burnGrid = function() {
+                grid = emptyGrid();
+
+                for(const segment of snake) {
+                    grid[segment[1]][segment[0]] = objectMapping.get("snake");
+                }
+
+                grid[apple[1]][apple[0]] = objectMapping.get("apple");
+            }
+            
+            const newGame = function() {
+                grid = emptyGrid();
+
+                snake = [[5, 9], [5, 8], [5, 7], [5, 6]];
+                snakeDirection = "w";
+                burnGrid();
+
+                apple = randomApplePos();
+                burnGrid();
+            }
+
+            const isGameOver = function(tile) {
+                return tile[0] < 0 || tile[0] >= gridWidth || tile[1] < 0 || tile[1] >= gridHeight;
+            }
+
+            const updateSnake = function() {
+                let movementVector = keyMapping.get(snakeDirection);
+
+                let oldTile = snake.at(-1);
+                let newTile = [
+                    oldTile[0] + movementVector[0],
+                    oldTile[1] + movementVector[1]
+                ];
+
+                if(isGameOver(newTile)) {
+                    newGame();
+                } else {
+                    let forward = grid[newTile[1]][newTile[0]];
+
+                    if(forward === objectMapping.get("snake")) {
+                        newGame();
+                    } else {
+                        snake.push(newTile);
+
+                        if(forward != objectMapping.get("apple")) {
+                            snake.shift();
+                        } else {
+                            apple = randomApplePos();
+                        }
+                    }
+                }
+            }
+
+            const drawGrid = function() {
+                for(let y = 0; y < gridHeight; y++) {
+                    for(let x = 0; x < gridWidth; x++) {
+                        ctx.fillStyle = grid[y][x];
+                        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+
+            const isConflicting = function(direction) {
+                let xAxis = ["a", "d"];
+                let yAxis = ["w", "s"];
+
+                if(xAxis.includes(snakeDirection) && xAxis.includes(direction)) {
+                    return true;
+                }
+
+                if(yAxis.includes(snakeDirection) && yAxis.includes(direction)) {
+                    return true;
+                }
+
+                return false;
+            }
+
+            let tick = 0;
+
+            const draw = function(timestamp) {
+                requestAnimationFrame(draw);
+
+                const delta = timestamp - last;
+                if (delta < interval) return; // skip frame
+            
+                last = timestamp - (delta % interval);
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if(tick % conversion === 0) {
+                    updateSnake();
+                }
+
+                burnGrid();
+                drawGrid();
+
+                tick++;
+            }
+
+            window.addEventListener("keydown", (e) => {
+                if(keyMapping.has(e.key)) {
+                    if(!isConflicting(e.key)) {
+                        snakeDirection = e.key;
+                    }
+                }
+            });
+
+            newGame();
+            drawGrid();
+            requestAnimationFrame(draw);
+        </script>
+    </body>
+</html>
